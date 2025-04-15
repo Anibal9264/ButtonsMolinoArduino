@@ -1,0 +1,100 @@
+#include <Wire.h>
+#include <Arduino.h>
+
+int ps = 0;
+unsigned long startTime = 0; 
+unsigned long duration = 0; 
+bool isDuration = true;
+
+void setup() {
+  Serial.begin(9600);
+  Wire.begin();
+  for (int i = 2; i <= 8; i++) {
+    pinMode(i, INPUT_PULLUP);
+  }
+}
+
+byte pin[] = {2, 3, 8, 9, 10, 11, 12, 13};
+int estados[] = {1,1,1,1,1,1,1,1};
+
+void loop() {
+  bool p1 = digitalRead(2) == LOW; // 2 I/O
+  bool p2 = digitalRead(3) == LOW; // 3 I/O
+  bool p3 = digitalRead(4) == LOW; // 4 I/O
+  bool p4 = digitalRead(5) == LOW; // 5 I/O
+  bool p5 = digitalRead(6) == LOW; // 6 I/O
+  bool p6 = digitalRead(7) == LOW; // 7 I/O
+  bool p7 = digitalRead(8) == LOW; // 8 I/O
+  int two = 0;
+
+  if(p1) two++;
+  if(p2) two++;
+  if(p3) two++;
+  if(p4) two++;
+  if(p5) two++;
+  if(p6) two++;
+  if(p7) two++;
+
+  if(two==2){updateButtonState();}
+
+  if(ps<0 && p1 && p2 ){         // 01 -> 2-3
+      ps = 0; 
+  }else if( ps<0 && p1 && p3 ) { // 02 -> 2-4
+      ps = 1;
+  }else if( ps<0 && p1 && p4 ) { // 03 -> 2-5
+      ps = 2;
+  }else if( ps<0 && p1 && p5 ) { // 04 -> 2-6
+      ps = 3; 
+  }else if( ps<0 && p1 && p6 ) { // 05 -> 2-7
+      ps = 4; 
+  }else if( ps<0 && p1 && p7 ) { // 06 -> 2-8
+      ps = 5; 
+  }else if( ps<0 && p2 && p3 ) { // 07 -> 3-4
+      ps = 6; 
+  }else if( ps<0 && p2 && p4 ) { // 08 -> 3-5
+      ps = 7; 
+  }
+  
+  if(ps>=0 && two<2){
+    if(!isDuration){
+      selectPin(ps,duration);
+      ps = -1;
+      two = 0;
+    }else{
+      isDuration = false;
+      startTime = 0;
+      duration = 0;
+      ps = -1;
+      two = 0;
+    }
+  }
+  //Serial.println(String(p1)+String(p2)+String(p3)+String(p4)+String(p5));
+  delay(100);
+}
+
+void selectPin(int p,unsigned long duracion){
+  int estado = estados[p] == 0 ? 1 : 0;
+  estados[p] = estado;
+  transmitir(pin[p],estado,duracion);
+  startTime = 0;
+  duration = 0;
+}
+
+void transmitir(byte pin,int est, unsigned long duracion){
+  byte dur = (duracion/1000);
+  Wire.beginTransmission(1);
+  Wire.write(pin);
+  Wire.write(est);
+  Wire.write(dur);
+  Wire.endTransmission();
+  Serial.println("Pin: " + String(pin) + " Estado: " + String(est)+ " Duracion: " + String(dur));
+}
+
+// Función para actualizar el estado de un botón y calcular la duración
+void updateButtonState() {
+  if (startTime == 0) {
+    startTime = millis();
+  } else if (startTime != 0){
+    duration = millis() - startTime;
+  }
+}
